@@ -21,6 +21,8 @@ JENKINS_URL = os.getenv("JENKINS_URL")
 JENKINS_USER = os.getenv("JENKINS_USER")
 JENKINS_TOKEN = os.getenv("JENKINS_TOKEN")
 
+print(">>> SLACK_BOT_TOKEN in Flask:", SLACK_BOT_TOKEN[:12] if SLACK_BOT_TOKEN else "None")
+
 # -------------------------------------------------------------------
 # 1️⃣ Slash command (/bmi) → open modal in Slack
 # -------------------------------------------------------------------

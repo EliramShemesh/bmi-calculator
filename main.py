@@ -58,7 +58,7 @@ def open_modal():
         },
     }
 
-    headers = {"Authorization": f"Bearer {SLACK_BOT_TOKEN}"}
+    headers = {"Authorization": f"Bearer {SLACK_BOT_TOKEN}", "Content-Type": "application/json; charset=utf-8"}
     response = requests.post("https://slack.com/api/views.open", headers=headers, json=modal)
     logging.debug("Slack views.open response: %s", response.text)
 

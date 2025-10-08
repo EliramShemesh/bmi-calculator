@@ -27,16 +27,20 @@ pipeline {
         }
 
         stage('Start Flask') {
-            steps {
-                echo "Starting Flask server in background..."
-                sh '''
-                    . venv/bin/activate
-                    nohup python3 main.py > flask.log 2>&1 &
-                    echo "Flask started in background"
-                    sleep 5  # wait for Flask to fully start
-                '''
-            }
-        }
+    steps {
+        echo "Starting Flask server in background..."
+        sh '''
+            . venv/bin/activate
+            export SLACK_BOT_TOKEN="${SLACK_BOT_TOKEN}"
+            export JENKINS_URL="${JENKINS_URL}"
+            export JENKINS_USER="${JENKINS_USER}"
+            export JENKINS_TOKEN="${JENKINS_TOKEN}"
+            nohup python3 main.py > flask.log 2>&1 &
+            echo "Flask started in background"
+            sleep 5
+        '''
+    }
+}
 
         stage('Calculate BMI') {
             steps {

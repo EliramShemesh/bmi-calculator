@@ -1,38 +1,22 @@
 pipeline {
     agent any
-
-    stages {
-        stage('Checkout') {
-            steps {
-                git branch: 'main',
-                    url: 'https://github.com/EliramShemesh/bmi-calculator.git'
-            }
-        }
-
-        stage('Install Dependencies') {
-            steps {
-                sh '''
-                    python3 -m pip install --upgrade pip
-                '''
-            }
-        }
-
-        stage('Execute Python Script') {
-            steps {
-                sh 'python3 bmi_calculator.py'
-            }
-        }
+    parameters {
+        string(name: 'Height', defaultValue: '', description: 'User height in meters')
+        string(name: 'Weight', defaultValue: '', description: 'User weight in kg')
     }
+    stages {
+        stage('Calculate BMI') {
+            steps {
+                script {
+                    // Check out your repository where the python script resides
+                    checkout scm
 
-    post {
-        always {
-            echo 'Pipeline finished'
+                    // Execute the python script, passing the parameters
+                    sh "python your_bmi_script.py --height ${params.HEIGHT} --weight ${params.WEIGHT}"
+                }
+            }
         }
-        success {
-            echo 'Script executed successfully'
-        }
-        failure {
-            echo 'Script execution failed'
-        }
+        // Optional: Add a stage to send the BMI result back to Slack
+        // using the slackSend step (requires Slack Notification Plugin).
     }
 }

@@ -1,14 +1,13 @@
 from flask import Flask, request, jsonify
 import requests
 import json
-import time
 
 app = Flask(__name__)
 
-SLACK_BOT_TOKEN = "xoxb-your-token"
-JENKINS_URL = "https://your-jenkins-url/job/your-job-name/buildWithParameters"
-JENKINS_USER = "your-jenkins-user"
-JENKINS_TOKEN = "your-jenkins-api-token"
+SLACK_BOT_TOKEN = "SLACKBOT_TOKEN"
+JENKINS_URL = "JENKINS_URL"
+JENKINS_USER = "JENKINS_USER"
+JENKINS_TOKEN = "JENKINS_TOKEN"
 
 # 1️⃣ Slash command trigger
 @app.route("/bmi", methods=["POST"])

@@ -26,13 +26,14 @@ pipeline {
             }
         }
 
-        stage('Start Flask (Optional)') {
+        stage('Start Flask') {
             steps {
                 echo "Starting Flask server in background..."
                 sh '''
                     . venv/bin/activate
                     nohup python3 main.py > flask.log 2>&1 &
                     echo "Flask started in background"
+                    sleep 5  # wait for Flask to fully start
                 '''
             }
         }

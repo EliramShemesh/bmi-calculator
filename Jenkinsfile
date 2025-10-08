@@ -19,7 +19,7 @@ pipeline {
 
         stage('Execute Python Script') {
             steps {
-                sh 'blob/main/bmi_calculator.py'
+                sh 'bmi_calculator.py'
             }
         }
     }

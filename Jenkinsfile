@@ -10,16 +10,14 @@ pipeline {
 
     // Inject secrets from Jenkins Credentials Store
     environment {
-        // These IDs must match your Jenkins credentials entries
         SLACK_BOT_TOKEN = credentials('SLACKBOT_TOKEN')
-        FLASK_RESULT_URL = credentials('FLASK_RESULT_URL') // if you stored it as a secret
+        FLASK_RESULT_URL = credentials('FLASK_RESULT_URL')
     }
 
     stages {
         stage('Setup') {
             steps {
-                echo "Starting BMI calculation for user: ${params.USER}"
-                // Optional: create venv, install dependencies
+                echo "Preparing environment..."
                 sh '''
                     python3 -m venv venv
                     . venv/bin/activate
@@ -28,19 +26,23 @@ pipeline {
             }
         }
 
-        stage('Run BMI Script') {
+        stage('Calculate BMI') {
             steps {
                 script {
-                    echo "Calculating BMI for height: ${params.HEIGHT} and weight: ${params.WEIGHT}"
-                    // Run your BMI Python script and capture result
+                    echo "Calculating BMI for HEIGHT=${params.HEIGHT} WEIGHT=${params.WEIGHT}"
+
+                    // Simple BMI calculation in Jenkins (Python one-liner)
                     def bmi = sh(
-                        script: ". venv/bin/activate && python3 bmi.py ${params.HEIGHT} ${params.WEIGHT}",
+                        script: """
+                            . venv/bin/activate
+                            python3 -c "h=float('${params.HEIGHT}'); w=float('${params.WEIGHT}'); print(round(w/((h/100)**2), 2))"
+                        """,
                         returnStdout: true
                     ).trim()
 
                     echo "BMI result: ${bmi}"
 
-                    // Post result to Flask backend (which will post to Slack)
+                    // Post result to Flask backend (which will forward to Slack)
                     sh """
                         curl -s -X POST -H "Content-Type: application/json" \
                         -H "Authorization: Bearer ${SLACK_BOT_TOKEN}" \

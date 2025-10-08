@@ -68,24 +68,40 @@ def open_modal():
 # 2️⃣ Modal submission → trigger Jenkins job
 # -------------------------------------------------------------------
 @app.route("/slack/interactions", methods=["POST"])
-def handle_interactions():
-    # Get the payload field and parse it
-    payload = request.form.get("payload")
-    if not payload:
+def handle_interaction():
+    payload_str = request.form.get("payload")
+    if not payload_str:
         return "No payload found", 400
 
-    data = json.loads(payload)  # This is the actual Slack JSON
+    try:
+        payload = json.loads(payload_str)
+    except json.JSONDecodeError:
+        return "Invalid JSON payload", 400
 
-    # Example: check the type
-    if data.get("type") == "view_submission":
-        values = data["view"]["state"]["values"]
+    # Only handle modal submissions
+    if payload.get("type") == "view_submission" and payload.get("view"):
+        values = payload["view"]["state"]["values"]
+
+        # Match your block IDs from your modal
         height = values["height_block"]["height_input"]["value"]
         weight = values["weight_block"]["weight_input"]["value"]
-        user_id = data["user"]["id"]
+        user_id = payload["user"]["id"]
 
-        # Trigger Jenkins or do your processing here
+        # Trigger Jenkins job asynchronously
+        try:
+            response = requests.post(
+                f"{JENKINS_URL}/job/bmi_job/buildWithParameters",
+                auth=(JENKINS_USER, JENKINS_TOKEN),
+                params={"HEIGHT": height, "WEIGHT": weight, "USER": user_id},
+            )
+            if response.status_code == 201:
+                print(f"Triggered Jenkins job for user {user_id}")
+            else:
+                print(f"Failed to trigger Jenkins job: {response.status_code} - {response.text}")
+        except Exception as e:
+            print(f"Error triggering Jenkins: {e}")
 
-        # Close the modal immediately
+        # Close modal immediately
         return jsonify({"response_action": "clear"})
 
     return "", 200

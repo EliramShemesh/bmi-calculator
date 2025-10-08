@@ -1,16 +1,21 @@
-#!/usr/bin/env python3
+import os
+import json
+import threading
+import logging
+import requests
 from flask import Flask, request, jsonify
 from dotenv import load_dotenv
-import os
-import requests
-import json
 
-# Load environment variables from .env file (for local dev)
+# -------------------------------------------------------------------
+#  Setup
+# -------------------------------------------------------------------
 load_dotenv()
-
 app = Flask(__name__)
 
-# 🔐 Secrets from environment (never hardcode these)
+# Configure logging
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s [%(levelname)s] %(message)s')
+
+# 🔐 Secrets from environment
 SLACK_BOT_TOKEN = os.getenv("SLACK_BOT_TOKEN")
 JENKINS_URL = os.getenv("JENKINS_URL")
 JENKINS_USER = os.getenv("JENKINS_USER")
@@ -21,8 +26,12 @@ JENKINS_TOKEN = os.getenv("JENKINS_TOKEN")
 # -------------------------------------------------------------------
 @app.route("/bmi", methods=["POST"])
 def open_modal():
+    logging.debug("Received /bmi command")
+    logging.debug("Form data: %s", request.form)
+
     trigger_id = request.form.get("trigger_id")
     if not trigger_id:
+        logging.error("No trigger_id found in the request!")
         return "No trigger_id found", 400
 
     modal = {
@@ -49,39 +58,47 @@ def open_modal():
         },
     }
 
-    # Call Slack API to open modal
     headers = {"Authorization": f"Bearer {SLACK_BOT_TOKEN}"}
-    r = requests.post("https://slack.com/api/views.open", headers=headers, json=modal)
-    print(r.text)  # Always log Slack response for debugging
+    response = requests.post("https://slack.com/api/views.open", headers=headers, json=modal)
+    logging.debug("Slack views.open response: %s", response.text)
 
     return "", 200
-
 
 # -------------------------------------------------------------------
 # 2️⃣ Modal submission → trigger Jenkins job
 # -------------------------------------------------------------------
 @app.route("/slack/interactions", methods=["POST"])
-def handle_interaction():
+def handle_interactions():
+    logging.debug("Received Slack interaction")
+    logging.debug("Form data: %s", request.form)
+    logging.debug("Raw data: %s", request.get_data())
+
     payload_str = request.form.get("payload")
     if not payload_str:
+        logging.error("No payload found!")
         return "No payload found", 400
 
     try:
         payload = json.loads(payload_str)
     except json.JSONDecodeError:
+        logging.error("Invalid JSON payload: %s", payload_str)
         return "Invalid JSON payload", 400
 
-    # Only handle modal submissions
-    if payload.get("type") == "view_submission" and payload.get("view"):
+    logging.debug("Parsed payload: %s", json.dumps(payload, indent=2))
+
+    if payload.get("type") == "view_submission":
         values = payload["view"]["state"]["values"]
+        try:
+            height = values["height_block"]["height_input"]["value"]
+            weight = values["weight_block"]["weight_input"]["value"]
+            user_id = payload["user"]["id"]
+        except KeyError as e:
+            logging.error("KeyError accessing values: %s\nValues: %s", e, json.dumps(values, indent=2))
+            return "Bad payload structure", 400
 
-        # ✅ Use the correct block IDs from your modal
-        height = values["height"]["height_input"]["value"]
-        weight = values["weight"]["weight_input"]["value"]
-        user_id = payload["user"]["id"]
+        logging.info("User %s submitted height=%s, weight=%s", user_id, height, weight)
 
-        # Trigger Jenkins job asynchronously
-        import threading
+        # Trigger Jenkins asynchronously
         def trigger_jenkins():
             try:
                 response = requests.post(
@@ -89,18 +106,16 @@ def handle_interaction():
                     auth=(JENKINS_USER, JENKINS_TOKEN),
                     params={"HEIGHT": height, "WEIGHT": weight, "USER": user_id},
                 )
-                if response.status_code == 201:
-                    print(f"Triggered Jenkins job for user {user_id}")
-                else:
-                    print(f"Failed to trigger Jenkins job: {response.status_code} - {response.text}")
+                logging.info("Jenkins response: %s %s", response.status_code, response.text)
             except Exception as e:
-                print(f"Error triggering Jenkins: {e}")
+                logging.error("Error triggering Jenkins: %s", e)
 
         threading.Thread(target=trigger_jenkins).start()
+        logging.debug("Jenkins trigger thread started")
 
-        # Close modal immediately
         return jsonify({"response_action": "clear"})
 
+    logging.debug("Interaction type not handled: %s", payload.get("type"))
     return "", 200
 
 # -------------------------------------------------------------------
@@ -109,30 +124,37 @@ def handle_interaction():
 @app.route("/jenkins/result", methods=["POST"])
 def receive_result():
     data = request.json
-    user_id = data["user"]
-    bmi = data["bmi"]
+    logging.debug("Received Jenkins result: %s", data)
+
+    user_id = data.get("user")
+    bmi = data.get("bmi")
+
+    if not user_id or not bmi:
+        logging.error("Invalid data from Jenkins: %s", data)
+        return "Invalid data", 400
 
     message = f"Your BMI is *{bmi}*"
 
-    requests.post(
+    response = requests.post(
         "https://slack.com/api/chat.postMessage",
         headers={"Authorization": f"Bearer {SLACK_BOT_TOKEN}"},
         json={"channel": user_id, "text": message},
     )
+    logging.debug("Slack chat.postMessage response: %s", response.text)
 
     return "", 200
-
 
 # -------------------------------------------------------------------
 # 4️⃣ Health check
 # -------------------------------------------------------------------
 @app.route("/", methods=["GET"])
 def home():
+    logging.debug("Health check requested")
     return "Slack ↔ Jenkins BMI integration is running!", 200
-
 
 # -------------------------------------------------------------------
 #  Run the Flask server
 # -------------------------------------------------------------------
 if __name__ == "__main__":
+    logging.info("Starting Flask server on 0.0.0.0:8080")
     app.run(host="0.0.0.0", port=8080, debug=True)

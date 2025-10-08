@@ -22,6 +22,8 @@ JENKINS_TOKEN = os.getenv("JENKINS_TOKEN")
 @app.route("/bmi", methods=["POST"])
 def open_modal():
     trigger_id = request.form.get("trigger_id")
+    if not trigger_id:
+        return "No trigger_id found", 400
 
     modal = {
         "trigger_id": trigger_id,
@@ -33,34 +35,25 @@ def open_modal():
             "blocks": [
                 {
                     "type": "input",
-                    "block_id": "height",
+                    "block_id": "height_block",
                     "label": {"type": "plain_text", "text": "Height (cm)"},
-                    "element": {
-                        "type": "plain_text_input",
-                        "action_id": "height_input",
-                    },
+                    "element": {"type": "plain_text_input", "action_id": "height_input"},
                 },
                 {
                     "type": "input",
-                    "block_id": "weight",
+                    "block_id": "weight_block",
                     "label": {"type": "plain_text", "text": "Weight (kg)"},
-                    "element": {
-                        "type": "plain_text_input",
-                        "action_id": "weight_input",
-                    },
+                    "element": {"type": "plain_text_input", "action_id": "weight_input"},
                 },
             ],
         },
     }
 
-    # Open the modal in Slack
-    requests.post(
-        "https://slack.com/api/views.open",
-        headers={"Authorization": f"Bearer {SLACK_BOT_TOKEN}"},
-        json=modal,
-    )
+    # Call Slack API to open modal
+    headers = {"Authorization": f"Bearer {SLACK_BOT_TOKEN}"}
+    r = requests.post("https://slack.com/api/views.open", headers=headers, json=modal)
+    print(r.text)  # Always log Slack response for debugging
 
-    # Respond quickly (Slack requires <3s)
     return "", 200
 
 

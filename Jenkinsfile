@@ -21,7 +21,18 @@ pipeline {
                 sh '''
                     python3 -m venv venv
                     . venv/bin/activate
-                    pip install -q requests
+                    pip install -q requests flask python-dotenv
+                '''
+            }
+        }
+
+        stage('Start Flask (Optional)') {
+            steps {
+                echo "Starting Flask server in background..."
+                sh '''
+                    . venv/bin/activate
+                    nohup python3 main.py > flask.log 2>&1 &
+                    echo "Flask started in background"
                 '''
             }
         }

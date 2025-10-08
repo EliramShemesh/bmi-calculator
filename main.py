@@ -149,7 +149,7 @@ def receive_result():
 # -------------------------------------------------------------------
 # 4️⃣ Health check
 # -------------------------------------------------------------------
-@app.route("/", methods=["GET"])
+@app.route("/health", methods=["GET"])
 def home():
     logging.debug("Health check requested")
     return "Slack ↔ Jenkins BMI integration is running!", 200

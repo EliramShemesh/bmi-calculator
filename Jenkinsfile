@@ -19,7 +19,7 @@ pipeline {
 
         stage('Execute Python Script') {
             steps {
-                sh 'python3 https://github.com/EliramShemesh/bmi-calculator/blob/main/bmi_calculator.py'
+                sh 'blob/main/bmi_calculator.py'
             }
         }
     }

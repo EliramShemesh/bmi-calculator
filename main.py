@@ -82,30 +82,33 @@ def handle_interaction():
     if payload.get("type") == "view_submission" and payload.get("view"):
         values = payload["view"]["state"]["values"]
 
-        # Match your block IDs from your modal
-        height = values["height_block"]["height_input"]["value"]
-        weight = values["weight_block"]["weight_input"]["value"]
+        # ✅ Use the correct block IDs from your modal
+        height = values["height"]["height_input"]["value"]
+        weight = values["weight"]["weight_input"]["value"]
         user_id = payload["user"]["id"]
 
         # Trigger Jenkins job asynchronously
-        try:
-            response = requests.post(
-                f"{JENKINS_URL}/job/bmi_job/buildWithParameters",
-                auth=(JENKINS_USER, JENKINS_TOKEN),
-                params={"HEIGHT": height, "WEIGHT": weight, "USER": user_id},
-            )
-            if response.status_code == 201:
-                print(f"Triggered Jenkins job for user {user_id}")
-            else:
-                print(f"Failed to trigger Jenkins job: {response.status_code} - {response.text}")
-        except Exception as e:
-            print(f"Error triggering Jenkins: {e}")
+        import threading
+        def trigger_jenkins():
+            try:
+                response = requests.post(
+                    f"{JENKINS_URL}/job/bmi_job/buildWithParameters",
+                    auth=(JENKINS_USER, JENKINS_TOKEN),
+                    params={"HEIGHT": height, "WEIGHT": weight, "USER": user_id},
+                )
+                if response.status_code == 201:
+                    print(f"Triggered Jenkins job for user {user_id}")
+                else:
+                    print(f"Failed to trigger Jenkins job: {response.status_code} - {response.text}")
+            except Exception as e:
+                print(f"Error triggering Jenkins: {e}")
+
+        threading.Thread(target=trigger_jenkins).start()
 
         # Close modal immediately
         return jsonify({"response_action": "clear"})
 
     return "", 200
-
 
 # -------------------------------------------------------------------
 # 3️⃣ Jenkins callback → post result back to Slack

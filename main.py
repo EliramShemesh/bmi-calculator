@@ -68,28 +68,24 @@ def open_modal():
 # 2️⃣ Modal submission → trigger Jenkins job
 # -------------------------------------------------------------------
 @app.route("/slack/interactions", methods=["POST"])
-def handle_interaction():
-    payload = json.loads(request.form["payload"])
+def handle_interactions():
+    # Get the payload field and parse it
+    payload = request.form.get("payload")
+    if not payload:
+        return "No payload found", 400
 
-    if payload.get("type") == "view_submission":
-        values = payload["view"]["state"]["values"]
-        height = values["height"]["height_input"]["value"]
-        weight = values["weight"]["weight_input"]["value"]
-        user = payload["user"]["id"]
+    data = json.loads(payload)  # This is the actual Slack JSON
 
-        # Trigger Jenkins job
-        response = requests.post(
-            JENKINS_URL,
-            auth=(JENKINS_USER, JENKINS_TOKEN),
-            params={"HEIGHT": height, "WEIGHT": weight, "USER": user},
-        )
+    # Example: check the type
+    if data.get("type") == "view_submission":
+        values = data["view"]["state"]["values"]
+        height = values["height_block"]["height_input"]["value"]
+        weight = values["weight_block"]["weight_input"]["value"]
+        user_id = data["user"]["id"]
 
-        if response.status_code == 201:
-            print(f"Triggered Jenkins job for user {user}")
-        else:
-            print(f"Failed to trigger Jenkins job: {response.status_code} - {response.text}")
+        # Trigger Jenkins or do your processing here
 
-        # Close modal immediately
+        # Close the modal immediately
         return jsonify({"response_action": "clear"})
 
     return "", 200

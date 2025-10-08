@@ -104,7 +104,7 @@ def handle_interactions():
         def trigger_jenkins():
             try:
                 response = requests.post(
-                    f"{JENKINS_URL}/job/bmi_calculator",
+                    f"{JENKINS_URL}/job/BMI-Calculator/buildWithParameters",
                     auth=(JENKINS_USER, JENKINS_TOKEN),
                     params={"HEIGHT": height, "WEIGHT": weight, "USER": user_id},
                 )

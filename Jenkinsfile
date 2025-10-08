@@ -1,22 +1,25 @@
 pipeline {
     agent any
     parameters {
-        string(name: 'Height', defaultValue: '', description: 'User height in meters')
-        string(name: 'Weight', defaultValue: '', description: 'User weight in kg')
+        string(name: 'HEIGHT', defaultValue: '', description: 'Height in cm')
+        string(name: 'WEIGHT', defaultValue: '', description: 'Weight in kg')
+        string(name: 'USER', defaultValue: '', description: 'Slack user ID')
     }
     stages {
-        stage('Calculate BMI') {
+        stage('Run BMI Script') {
             steps {
                 script {
-                    // Check out your repository where the python script resides
-                    checkout scm
+                    def result = sh(script: "python3 bmi.py ${params.HEIGHT} ${params.WEIGHT}", returnStdout: true).trim()
+                    echo "BMI result: ${result}"
 
-                    // Execute the python script, passing the parameters
-                    sh "python your_bmi_script.py --height ${params.HEIGHT} --weight ${params.WEIGHT}"
+                    // Send result to Slack backend
+                    sh """
+                    curl -X POST -H "Content-Type: application/json" \
+                        -d '{"user": "${params.USER}", "bmi": "${result}"}' \
+                        https://your-server-url/jenkins/result
+                    """
                 }
             }
         }
-        // Optional: Add a stage to send the BMI result back to Slack
-        // using the slackSend step (requires Slack Notification Plugin).
     }
 }

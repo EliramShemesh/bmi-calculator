@@ -106,7 +106,7 @@ def handle_interactions():
                 response = requests.post(
                     f"{JENKINS_URL}/job/BMI-Calculator/buildWithParameters",
                     auth=(JENKINS_USER, JENKINS_TOKEN),
-                    params={"HEIGHT": height, "WEIGHT": weight, "USER": user_id},
+                    params={"HEIGHT": height, "WEIGHT": weight},
                 )
                 logging.info("Jenkins response: %s %s", response.status_code, response.text)
             except Exception as e:
